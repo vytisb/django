@@ -43,9 +43,15 @@ class AddField(FieldOperation):
     Adds a field to a model.
     """
 
-    def __init__(self, model_name, name, field, preserve_default=True):
+    def __init__(self, model_name, name, field, default=NOT_PROVIDED, preserve_default=None):
+        if preserve_default is not None:
+            # TODO: add a deprecation warning here?
+            if not preserve_default:
+                field = field.clone()
+                default = field.default
+                field.default = NOT_PROVIDED
         self.field = field
-        self.preserve_default = preserve_default
+        self.default = default
         super(AddField, self).__init__(model_name, name)
 
     def deconstruct(self):
@@ -54,8 +60,8 @@ class AddField(FieldOperation):
             'name': self.name,
             'field': self.field,
         }
-        if self.preserve_default is not True:
-            kwargs['preserve_default'] = self.preserve_default
+        if self.default is not NOT_PROVIDED:
+            kwargs['default'] = self.default
         return (
             self.__class__.__name__,
             [],
@@ -63,13 +69,7 @@ class AddField(FieldOperation):
         )
 
     def state_forwards(self, app_label, state):
-        # If preserve default is off, don't use the default for future state
-        if not self.preserve_default:
-            field = self.field.clone()
-            field.default = NOT_PROVIDED
-        else:
-            field = self.field
-        state.models[app_label, self.model_name_lower].fields.append((self.name, field))
+        state.models[app_label, self.model_name_lower].fields.append((self.name, self.field))
         state.reload_model(app_label, self.model_name_lower)
 
     def database_forwards(self, app_label, schema_editor, from_state, to_state):
@@ -77,14 +77,15 @@ class AddField(FieldOperation):
         if self.allow_migrate_model(schema_editor.connection.alias, to_model):
             from_model = from_state.apps.get_model(app_label, self.model_name)
             field = to_model._meta.get_field(self.name)
-            if not self.preserve_default:
-                field.default = self.field.default
+            field_default = field.default
+            if self.default is not NOT_PROVIDED:
+                field.default = self.default
             schema_editor.add_field(
                 from_model,
                 field,
             )
-            if not self.preserve_default:
-                field.default = NOT_PROVIDED
+            if self.default is not NOT_PROVIDED:
+                field.default = field_default
 
     def database_backwards(self, app_label, schema_editor, from_state, to_state):
         from_model = from_state.apps.get_model(app_label, self.model_name)
@@ -102,6 +103,7 @@ class AddField(FieldOperation):
                         model_name=self.model_name,
                         name=operation.name,
                         field=operation.field,
+                        default=self.default if self.default is not NOT_PROVIDED else operation.default,
                     ),
                 ]
             elif isinstance(operation, RemoveField):
@@ -112,6 +114,7 @@ class AddField(FieldOperation):
                         model_name=self.model_name,
                         name=operation.new_name,
                         field=self.field,
+                        default=self.default,
                     ),
                 ]
         return super(AddField, self).reduce(operation, in_between, app_label=app_label)
@@ -161,9 +164,15 @@ class AlterField(FieldOperation):
     Alters a field's database column (e.g. null, max_length) to the provided new field
     """
 
-    def __init__(self, model_name, name, field, preserve_default=True):
+    def __init__(self, model_name, name, field, default=NOT_PROVIDED, preserve_default=None):
+        if preserve_default is not None:
+            # TODO: add a deprecation warning here?
+            if not preserve_default:
+                field = field.clone()
+                default = field.default
+                field.default = NOT_PROVIDED
         self.field = field
-        self.preserve_default = preserve_default
+        self.default = default
         super(AlterField, self).__init__(model_name, name)
 
     def deconstruct(self):
@@ -172,8 +181,8 @@ class AlterField(FieldOperation):
             'name': self.name,
             'field': self.field,
         }
-        if self.preserve_default is not True:
-            kwargs['preserve_default'] = self.preserve_default
+        if self.default is not NOT_PROVIDED:
+            kwargs['default'] = self.default
         return (
             self.__class__.__name__,
             [],
@@ -181,13 +190,8 @@ class AlterField(FieldOperation):
         )
 
     def state_forwards(self, app_label, state):
-        if not self.preserve_default:
-            field = self.field.clone()
-            field.default = NOT_PROVIDED
-        else:
-            field = self.field
         state.models[app_label, self.model_name_lower].fields = [
-            (n, field if n == self.name else f)
+            (n, self.field if n == self.name else f)
             for n, f in
             state.models[app_label, self.model_name_lower].fields
         ]
@@ -199,11 +203,12 @@ class AlterField(FieldOperation):
             from_model = from_state.apps.get_model(app_label, self.model_name)
             from_field = from_model._meta.get_field(self.name)
             to_field = to_model._meta.get_field(self.name)
-            if not self.preserve_default:
-                to_field.default = self.field.default
+            field_default = to_field.default
+            if self.default is not NOT_PROVIDED:
+                to_field.default = self.default
             schema_editor.alter_field(from_model, from_field, to_field)
-            if not self.preserve_default:
-                to_field.default = NOT_PROVIDED
+            if self.default is not NOT_PROVIDED:
+                to_field.default = field_default
 
     def database_backwards(self, app_label, schema_editor, from_state, to_state):
         self.database_forwards(app_label, schema_editor, from_state, to_state)
@@ -221,6 +226,7 @@ class AlterField(FieldOperation):
                     model_name=self.model_name,
                     name=operation.new_name,
                     field=self.field,
+                    default=self.default,
                 ),
             ]
         return super(AlterField, self).reduce(operation, in_between, app_label=app_label)

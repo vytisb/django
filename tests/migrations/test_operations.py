@@ -947,18 +947,18 @@ class OperationTests(OperationTestBase):
             operation.database_forwards("test_regr22168", editor, project_state, new_state)
         self.assertColumnExists("test_regr22168_pony", "order")
 
-    def test_add_field_preserve_default(self):
+    def test_add_field_default(self):
         """
         Tests the AddField operation's state alteration
-        when preserve_default = False.
+        when default is given.
         """
         project_state = self.set_up_test_model("test_adflpd")
         # Test the state alteration
         operation = migrations.AddField(
             "Pony",
             "height",
-            models.FloatField(null=True, default=4),
-            preserve_default=False,
+            models.FloatField(null=True),
+            default=4,
         )
         new_state = project_state.clone()
         operation.state_forwards("test_adflpd", new_state)
@@ -980,7 +980,7 @@ class OperationTests(OperationTestBase):
         definition = operation.deconstruct()
         self.assertEqual(definition[0], "AddField")
         self.assertEqual(definition[1], [])
-        self.assertEqual(sorted(definition[2]), ["field", "model_name", "name", "preserve_default"])
+        self.assertEqual(sorted(definition[2]), ["default", "field", "model_name", "name"])
 
     def test_add_field_m2m(self):
         """

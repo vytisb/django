@@ -802,25 +802,23 @@ class MigrationAutodetector(object):
             dependencies.extend(self._get_dependecies_for_foreign_key(field))
         # You can't just add NOT NULL fields with no default or fields
         # which don't allow empty strings as default.
-        preserve_default = True
+        default = models.NOT_PROVIDED
         time_fields = (models.DateField, models.DateTimeField, models.TimeField)
         if (not field.null and not field.has_default() and
                 not field.many_to_many and
                 not (field.blank and field.empty_strings_allowed) and
                 not (isinstance(field, time_fields) and field.auto_now)):
-            field = field.clone()
             if isinstance(field, time_fields) and field.auto_now_add:
-                field.default = self.questioner.ask_auto_now_add_addition(field_name, model_name)
+                default = self.questioner.ask_auto_now_add_addition(field_name, model_name)
             else:
-                field.default = self.questioner.ask_not_null_addition(field_name, model_name)
-            preserve_default = False
+                default = self.questioner.ask_not_null_addition(field_name, model_name)
         self.add_operation(
             app_label,
             operations.AddField(
                 model_name=model_name,
                 name=field_name,
                 field=field,
-                preserve_default=preserve_default,
+                default=default,
             ),
             dependencies=dependencies,
         )
@@ -881,23 +879,17 @@ class MigrationAutodetector(object):
                 neither_m2m = not old_field.many_to_many and not new_field.many_to_many
                 if both_m2m or neither_m2m:
                     # Either both fields are m2m or neither is
-                    preserve_default = True
+                    default = models.NOT_PROVIDED
                     if (old_field.null and not new_field.null and not new_field.has_default() and
                             not new_field.many_to_many):
-                        field = new_field.clone()
-                        new_default = self.questioner.ask_not_null_alteration(field_name, model_name)
-                        if new_default is not models.NOT_PROVIDED:
-                            field.default = new_default
-                            preserve_default = False
-                    else:
-                        field = new_field
+                        default = self.questioner.ask_not_null_alteration(field_name, model_name)
                     self.add_operation(
                         app_label,
                         operations.AlterField(
                             model_name=model_name,
                             name=field_name,
-                            field=field,
-                            preserve_default=preserve_default,
+                            field=new_field,
+                            default=default,
                         )
                     )
                 else:

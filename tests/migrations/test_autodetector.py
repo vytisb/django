@@ -697,7 +697,7 @@ class AutodetectorTests(TestCase):
         # Right number/type of migrations?
         self.assertNumberMigrations(changes, 'testapp', 1)
         self.assertOperationTypes(changes, 'testapp', 0, ["AlterField"])
-        self.assertOperationAttributes(changes, "testapp", 0, 0, name="name", preserve_default=True)
+        self.assertOperationAttributes(changes, "testapp", 0, 0, name="name", default=models.NOT_PROVIDED)
 
     def test_supports_functools_partial(self):
         def _content_file_name(instance, filename, key, **kwargs):
@@ -759,7 +759,7 @@ class AutodetectorTests(TestCase):
         # Right number/type of migrations?
         self.assertNumberMigrations(changes, 'testapp', 1)
         self.assertOperationTypes(changes, 'testapp', 0, ["AlterField"])
-        self.assertOperationAttributes(changes, "testapp", 0, 0, name="name", preserve_default=True)
+        self.assertOperationAttributes(changes, "testapp", 0, 0, name="name", default=models.NOT_PROVIDED)
         self.assertOperationFieldAttributes(changes, "testapp", 0, 0, default='Ada Lovelace')
 
     @mock.patch('django.db.migrations.questioner.MigrationQuestioner.ask_not_null_alteration',
@@ -773,7 +773,7 @@ class AutodetectorTests(TestCase):
         # Right number/type of migrations?
         self.assertNumberMigrations(changes, 'testapp', 1)
         self.assertOperationTypes(changes, 'testapp', 0, ["AlterField"])
-        self.assertOperationAttributes(changes, "testapp", 0, 0, name="name", preserve_default=True)
+        self.assertOperationAttributes(changes, "testapp", 0, 0, name="name", default=models.NOT_PROVIDED)
         self.assertOperationFieldAttributes(changes, "testapp", 0, 0, default=models.NOT_PROVIDED)
 
     @mock.patch('django.db.migrations.questioner.MigrationQuestioner.ask_not_null_alteration',
@@ -787,8 +787,8 @@ class AutodetectorTests(TestCase):
         # Right number/type of migrations?
         self.assertNumberMigrations(changes, 'testapp', 1)
         self.assertOperationTypes(changes, 'testapp', 0, ["AlterField"])
-        self.assertOperationAttributes(changes, "testapp", 0, 0, name="name", preserve_default=False)
-        self.assertOperationFieldAttributes(changes, "testapp", 0, 0, default="Some Name")
+        self.assertOperationAttributes(changes, "testapp", 0, 0, name="name", default="Some Name")
+        self.assertOperationFieldAttributes(changes, "testapp", 0, 0, default=models.NOT_PROVIDED)
 
     def test_rename_field(self):
         """Tests autodetection of renamed fields."""
